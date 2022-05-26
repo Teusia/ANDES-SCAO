@@ -1,3 +1,8 @@
+"""
+Created on Tue May 17 16:30:42 2022
+
+@author: EstherSoria
+"""
 from astropy.io import fits
 import matplotlib.pyplot as plt
 import cv2

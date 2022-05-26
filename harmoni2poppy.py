@@ -16,11 +16,6 @@ for i in range(2000):
         
         wavelength = 850*10**-9
         telDia = 38.542
-    
-        
-        plt.figure(1)
-        plt.clf()
-        plt.imshow(test)
         
         
         hdu = fits.PrimaryHDU(test)
@@ -33,6 +28,6 @@ for i in range(2000):
         hdu.header['PIXUNIT'] = 'meters'
         hdu.header['BUNIT'] = 'meters'
         hdul = fits.HDUList(hdu)
-        hdul.writeto('part{:.0f}-screen{:.0f}.fits'.format(part,startScreen+i)
+        hdul.writeto('screen{:.0f}.fits'.format(i)
                      ,overwrite = True)
     

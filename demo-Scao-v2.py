@@ -124,24 +124,32 @@ if DL==1:
     imageDL=image
     centx,centy=cog(imageDL,1e-06)
     radDL,pixDL=RadialProfile(imageDL,centy, centx)
+    norm_fact=np.max(radDL)
+    radDL=radDL/norm_fact
 else:
     if vibra!=1 and alig!=1:
         centx,centy=cog(image,1e-06)
         rad,pix=RadialProfile(image,centy, centx)
+        norm_fact=np.max(rad)
+        rad=rad/norm_fact
     if vibra!=1 and alig==1:
         image1=image
         centx,centy=cog(image1,1e-06)
         rad1,pix1=RadialProfile(image1,centy, centx)
-    
+        norm_fact=np.max(rad1)
+        rad1=rad1/norm_fact
     if vibra==1 and alig!=1:
         image3=image
         centx,centy=cog(image3,1e-06)
         rad3,pix3=RadialProfile(image3,centy, centx)
-    
+        norm_fact=np.max(rad3)
+        rad3=rad3/norm_fact
     if vibra==1 and alig==1:
         image2=image
         centx,centy=cog(image2,1e-06)
         rad2,pix2=RadialProfile(image2,centy, centx)
+        norm_fact=np.max(rad2)
+        rad2=rad2/norm_fact
 
 
 """

@@ -1,0 +1,62 @@
+"""
+Created on Fri May 27 10:54:46 2022
+
+@author: esoria
+
+Graphics generator
+
+--- Pendind to review -------
+"""
+from demo_Scao import *
+from ev_PSF import *
+import matplotlib.pyplot as plt
+magn=[8,11.5,15,14]
+atmWF=[1,1.6,2.16,2.57]
+idx = 2
+I=magn[idx]
+atmWorseningFactor=atmWF[idx]
+wavelength = 2.2*10**-6
+
+DL=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, rmsIslandEffect = 0, rmsSegmentJitter = 0
+            ,rmsWindshake=0
+            ,atmWorseningFactor = 0 , pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen'
+            ,outputFileSufix='I=8-2200nm.fits')
+pixDL,radDL=ev_PSF(DL)
+atm=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, rmsIslandEffect = 0, rmsSegmentJitter = 0
+            ,rmsWindshake=0
+            ,atmWorseningFactor = atmWorseningFactor, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen'
+            ,outputFileSufix='I=8-2200nm.fits')
+pix,rad=ev_PSF(atm)
+atm_p=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, rmsIslandEffect = 1.5, rmsSegmentJitter = 0
+            ,rmsWindshake = 0
+            ,atmWorseningFactor = atmWorseningFactor, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen'
+            ,outputFileSufix='I=8-2200nm.fits')
+pix1,rad1=ev_PSF(atm_p)
+
+atm_v=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, rmsIslandEffect = 0, rmsSegmentJitter = 0.010
+            ,rmsWindshake = 0
+            ,atmWorseningFactor = atmWorseningFactor, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen'
+            ,outputFileSufix='I=8-2200nm.fits')
+pix2,rad2=ev_PSF(atm_v)
+
+atm_p_v=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, rmsIslandEffect = 1.5, rmsSegmentJitter = 0.010
+            ,rmsWindshake = 0
+            ,atmWorseningFactor = atmWorseningFactor,pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen'
+            ,outputFileSufix='I=8-2200nm.fits')
+pix3,rad3=ev_PSF(atm_p_v)
+
+
+
+plt.figure()
+plt.yscale("log")
+plt.title('Radial distribution, I={}, WL= {}um'.format(I, wavelength*10**6), fontsize=15)
+plt.xlabel('Distance from PSF center (mas)', fontsize=12)
+plt.ylabel('Frequency', fontsize=12)
+plt.plot(pixDL[0:80], radDL[0:80],  label='psf DL')
+plt.plot(pix[0:80], rad[0:80],  label='psf + res')
+plt.plot(pix1[0:80], rad1[0:80], label='psf + pist + res')
+plt.plot(pix2[0:80], rad2[0:80], label='psf  vibra + res')
+plt.plot(pix3[0:80], rad3[0:80], label='psf pist + vibra + res')
+plt.grid()
+plt.legend(loc=1)
+plt.show()

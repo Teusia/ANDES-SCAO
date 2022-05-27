@@ -23,17 +23,16 @@ def Mod_segment(amp,types):
     
     pupilMap = Data1.copy()
     tmppupilMask = Data1.copy()
-    #generate a pupil map with the number of the segment in with the pixel is placed
+    #generate a pupil map with the number of the segment in which the pixel is placed
     for s in range(5):
          mask = np.logical_and(theta[:,:]>limites[s] , theta[:,:]<limites[s+1]) #codition     
          mask = mask*tmppupilMask
          pupilMap += mask*(s+1)       
         
-    
+    #applying the value of the amplitudes
     for s in range(6):
-         Newpupil[pupilMap==s+1] = amp[s] #applying the value of the amplitude
+         Newpupil[pupilMap==s+1] = amp[s] 
          
-
     #Saving in poppy format
     part = 3
     wavelength = 850*10**-9

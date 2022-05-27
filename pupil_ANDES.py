@@ -8,11 +8,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 #inputs must be an array
 def Mod_segment(amp,types):
-    hdu = fits.open('Tel-Pupil.fits')
+   hdu = fits.open('Tel-Pupil.fits')
     Data1 = hdu [0] .data # get data
+    amp= np.asarray(ampi * (10**3)) #convert into nm
+    np.random.shuffle(amp)
     cx=Data1//2 #center of the pupil x coordinate
     cy=Data1//2 #center of the pupil y coordinate
-   
     #Give to each segment the value of the amplitud
     Newpupil=Data1.astype('float64')
     #generate a meshgrid with the pixel position to evaluate the position with respect its angle

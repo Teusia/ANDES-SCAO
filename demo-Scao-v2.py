@@ -7,12 +7,8 @@ Created on Fri Jan 28 11:45:35 2022
 """
 import numpy as np
 import poppy as po
-from astropy.io import fits
-from astropy import units as u
 import datetime
-import random
 from pupil_ANDES import *
-
 
 def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshake
             ,atmWorseningFactor,pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen'

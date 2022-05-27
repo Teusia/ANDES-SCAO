@@ -63,7 +63,7 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
         osys = po.OpticalSystem(npix = 400,oversample = 4)
         osys.add_pupil(atmScreen)
        
-        amp= np.random.normal(0, rmsIslandEffect, 6) #um
+        amp= np.random.normal(0, rmsSegmentJitter, 6) #um
         Mod_segment(amp,2)
        
        # wfe = po.ZernikeWFE(radius=15*u.m,

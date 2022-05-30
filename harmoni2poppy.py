@@ -8,11 +8,14 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 
 part = 3
-startScreen = 200
-for i in range(2000):
-    with fits.open('Res-OPDseq-nm_PART-{:.0f}.fits'.format(part)) as hdul1:
+startScreen = 0
+
+for i in range(1000):
+    # with fits.open('Res-OPDseq-nm_PART-{:.0f}.fits'.format(part)) as hdul1:
+    with fits.open('resWF_13.fits'.format(part)) as hdul1:
         # hdul1.info()
-        test = hdul1[0].data[i+startScreen,0,:,:]*10**-9
+        # test = hdul1[0].data[i+startScreen,0,:,:]*10**-9
+        test = hdul1[0].data[i+startScreen,:,:]
         
         wavelength = 850*10**-9
         telDia = 38.542
@@ -28,6 +31,8 @@ for i in range(2000):
         hdu.header['PIXUNIT'] = 'meters'
         hdu.header['BUNIT'] = 'meters'
         hdul = fits.HDUList(hdu)
-        hdul.writeto('screen{:.0f}.fits'.format(i)
+        hdul.writeto('screen_I=12/screenI=12{:.0f}.fits'.format(i+1000)
                      ,overwrite = True)
+        
+        hdul1.close()
     

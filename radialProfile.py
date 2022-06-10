@@ -125,9 +125,7 @@ for lf in listFits:
     X,Y = np.meshgrid(x,x)
     R = np.sqrt(X**2+Y**2)
     
-    
-    
-    
+    #psf binning starts here
     #calculate the reference
     mask = R<=binSize/2
     ref = np.sum(test*mask)
@@ -180,7 +178,7 @@ for lf in listFits:
     plt.plot(xvar,mmax/ref,drawstyle = 'steps-mid')
     toto = plt.errorbar(xvar, maverage/ref, yerr = mstd/ref,capsize=5
                         ,drawstyle = 'steps-mid')
-
+    #psf binning finishes here
     
     #adjust the psf center
     # centering = adjustCenter(test)
@@ -228,7 +226,7 @@ for i in wluni:
     plt.title('wavelength {:.0f} nm'.format(i))
     plt.tight_layout()
 
-#binned psf profiles
+#binned psf profiles details of everything
 for lf in range(len(listFits)):
     
     plt.figure(listFits[lf])

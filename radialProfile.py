@@ -206,6 +206,9 @@ def plotBinnedContrast(binDat,wavelength,starType,saveFig = False,
     plt.grid()
     plt.tight_layout()
     
+    if saveFig:
+        plt.savefig(figName)
+    
 
 #%%
 path2fits = '20220530-162324/'

@@ -39,60 +39,63 @@ goal_bot=df.at[Band,'Goal bottom']
 
 
 #COMPARE THE DIFFERENT CONTRIBUTIONS
-DL,rms_DL=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 2, SDIslandEffect = 0, SDSegmentJitter = 0
-            ,rmsWindshake=0
-            , mag=0, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen')
+DL,rms_DL=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, SDIslandEffect = 0, SDSegmentJitter = 0
+           , SD_WS=0
+            , mag=0, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen',coro = 0)
 
 pixDL,radDL=ev_PSF(DL)
 
-WS,rms_WS=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 2, SDIslandEffect = 0, SDSegmentJitter = 0
-           ,rmsWindshake=1e-07
-           ,mag = I , pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen')
+WS,rms_WS=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, SDIslandEffect = 0, SDSegmentJitter = 0.01
+           ,SD_WS=0
+           ,mag = I , pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen',coro = 0)
 pixWS,radWS=ev_PSF(WS)
 
-atm,rms_atm=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 2, SDIslandEffect = 0, SDSegmentJitter = 0
-            ,rmsWindshake=0
-            ,mag = I, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen')
+atm,rms_atm=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, SDIslandEffect = 0, SDSegmentJitter = 0.02
+            ,SD_WS=0
+            ,mag = I, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen',coro = 0)
 pix,rad=ev_PSF(atm)
-atm_p,rms_atm_p=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 2, SDIslandEffect = 0.15, SDSegmentJitter = 0
-            ,rmsWindshake = 0
-            ,mag = I, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen')
+atm_p,rms_atm_p=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, SDIslandEffect = 0, SDSegmentJitter = 0.04
+            ,SD_WS= 0
+            ,mag = I, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen',coro = 0)
 pix1,rad1=ev_PSF(atm_p)
 
 
-atm_v,rms_atm_v=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 2, SDIslandEffect = 0, SDSegmentJitter = 0.05
-            ,rmsWindshake = 0
-            ,mag = I, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen')
+atm_v,rms_atm_v=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, SDIslandEffect = 0, SDSegmentJitter = 0.05
+            ,SD_WS = 0
+            ,mag = I, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen',coro = 0)
 pix2,rad2=ev_PSF(atm_v)
 
-atm_p_v,rms_atm_p_v=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 2, SDIslandEffect = 0.15, SDSegmentJitter = 0.05
-            ,rmsWindshake = 0
-            ,mag = I, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen')
+atm_p_v,rms_atm_p_v=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, SDIslandEffect = 0, SDSegmentJitter = 0.06
+            ,SD_WS = 0
+            ,mag = I, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen',coro = 0)
 pix3,rad3=ev_PSF(atm_p_v)
-atm_p_v_w,rms_atm_p_v_w=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 2, SDIslandEffect = 0.15, SDSegmentJitter = 0.05
-            ,rmsWindshake = 1e-07
-            ,mag = I, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen')
+atm_p_v_w,rms_atm_p_v_w=SCAOSim(wavelength = wavelength , nPix = 800, nScreen = 20, SDIslandEffect = 0.15, SDSegmentJitter = 0.05
+            ,SD_WS = 1e-07
+            ,mag = I, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen',coro = 0)
 pix4,rad4=ev_PSF(atm_p_v_w)
 
 #plot
 plt.figure()
 plt.yscale("log")
-#plt.title('Radial distribution, I={}, WL= {}um'.format(I, round(wavelength*10**6,2)), fontsize=15)
+plt.title('Radial distribution, Dynamic Piston, I={}, WL= {}um'.format(I, round(wavelength*10**6,2)), fontsize=15)
 plt.xlabel('Distance from PSF center (mas)', fontsize=12)
 plt.ylabel('Frequency', fontsize=12)
-plt.plot(pixDL[0:80], radDL[0:80],  label='DL')
-plt.plot(pixWS[0:80], radWS[0:80],  label='AOres + Ws')
+plt.plot(pixDL[0:150], radDL[0:150],  label='AOres')
+plt.plot(pixWS[0:150], radWS[0:150],  label='AOres + DP SD:0.01')
 
-plt.plot(pix[0:80], rad[0:80], label='AOres')
-plt.plot(pix1[0:80], rad1[0:80], label='AOres+ static piston')
-plt.plot(pix2[0:80], rad2[0:80], label='AOres + dynamic piston')
-plt.plot(pix3[0:80], rad3[0:80], label='AOres + static + dynamic piston')
-plt.plot(pix4[0:80], rad4[0:80], label='AOres + WS + static + dynamic piston')
+plt.plot(pix[0:150], rad[0:150], label='AOres + DP SD:0.02')
+
+plt.plot(pix1[0:150], rad1[0:150], label='AOres + DP SD:0.04')
+plt.plot(pix2[0:150], rad2[0:150], label='AOres + DP SD:0.05')
+plt.plot(pix3[0:150], rad3[0:150], label='AOres + DP SD:0.06')
+'''
+plt.plot(pix4[0:150], rad4[0:150], label='AOres + DP SD:0.06')
 
 plt.hlines(y=base_top, xmin=25 ,xmax=35, colors='aqua', linestyles='--', lw=2, label='Baseline')
 plt.hlines(y=base_bot, xmin=85, xmax=95, colors='aqua', linestyles='--', lw=2)
 plt.hlines(y=goal_top, xmin=25 ,xmax=35, colors='darkviolet', linestyles='--', lw=2, label='Goal')
 plt.hlines(y=goal_bot, xmin=85, xmax=95, colors='darkviolet', linestyles='--', lw=2)
+'''
 plt.legend(fontsize=8)
 plt.grid()
 plt.show()
@@ -102,13 +105,17 @@ plt.show()
 #COMPARE THE INFLUENCE OF THE REFECENCE STAR
 plt.figure()
 step=0
-for i in [0,8,12,14]:
-    WS,rms_WS=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 2, rmsIslandEffect = 0, rmsSegmentJitter = 0
-            ,rmsWindshake=0
-            ,mag = i , pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen'
-            ,outputFileSufix='I={}-{}nm.fits'.format(i,wavelength))
-    pixWS,radWS=ev_PSF(WS)
-    
+for i in [0,8,12]:
+    if i==0:
+        WS,rms_WS=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, SDIslandEffect = 0, SDSegmentJitter = 0
+                ,SD_WS=0
+                ,mag = i ,coro=0, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen')
+        pixWS,radWS=ev_PSF(WS)
+    else:
+        WS,rms_WS=SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 200, SDIslandEffect = 0.12, SDSegmentJitter = 0.05
+            ,SD_WS=1e-7
+            ,mag = i, coro = 0, pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen')
+        pixWS,radWS=ev_PSF(WS)
     plt.yscale("log")
     plt.grid(True, which="major")
     plt.title('Radial distribution, WL= {}um'.format(round(wavelength*10**6,2)), fontsize=15)
@@ -116,12 +123,12 @@ for i in [0,8,12,14]:
     plt.ylabel('Frequency', fontsize=12)   
     if i ==0:
        
-        plt.legend(fontsize=8)
-        plt.plot(pixWS[0:140], radWS[0:140],  label='DL')
-        plt.hlines(y=base_top, xmin=25 ,xmax=35, colors='aqua', linestyles='--', lw=2, label='Baseline')
-        plt.hlines(y=base_bot, xmin=85, xmax=95, colors='aqua', linestyles='--', lw=2)
-        plt.hlines(y=goal_top, xmin=25 ,xmax=35, colors='darkviolet', linestyles='--', lw=2, label='Goal')
-        plt.hlines(y=goal_bot, xmin=85, xmax=95, colors='darkviolet', linestyles='--', lw=2)
+        #plt.legend(fontsize=8)
+        plt.plot(pixWS[0:150], radWS[0:150],  label='DL')
+        #plt.hlines(y=base_top, xmin=25 ,xmax=35, colors='aqua', linestyles='--', lw=2, label='Baseline')
+        #plt.hlines(y=base_bot, xmin=85, xmax=95, colors='aqua', linestyles='--', lw=2)
+        #plt.hlines(y=goal_top, xmin=25 ,xmax=35, colors='darkviolet', linestyles='--', lw=2, label='Goal')
+        #plt.hlines(y=goal_bot, xmin=85, xmax=95, colors='darkviolet', linestyles='--', lw=2)
     else:
         plt.plot(pixWS[0:150], radWS[0:150],  label='Mag: {}'.format(i))
         plt.axvline(30, color='black', ls="dotted")
@@ -148,8 +155,8 @@ for i in range(10):
     plt.yscale("log") 
     if i ==0:    
         WS,SD=demo_Scao_tmp.SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 100,rmsIslandEffect=0, rmsSegmentJitter = 0
-            ,rmsWindshake=0
-            ,mag = 0 , pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen')
+            ,SD_WS=0
+            ,mag = 0 , pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen',coro = 0)
         pixWS,radWS=ev_PSF(WS)
    
         plt.plot(pixWS[0:140], radWS[0:140],  label='DL')
@@ -159,8 +166,8 @@ for i in range(10):
         plt.hlines(y=goal_bot, xmin=85, xmax=95, colors='darkviolet', linestyles='--', lw=2)
     else:
         WS,SD=demo_Scao_tmp.SCAOSim(wavelength = wavelength , nPix = 400, nScreen = 100,rmsIslandEffect=0.15, rmsSegmentJitter = 0
-            ,rmsWindshake=0
-            ,mag = I , pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen')
+            ,TT=0
+            ,mag = I , pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen',coro = 0)
         pixWS,radWS=ev_PSF(WS)
    
         plt.yscale("log") 

@@ -15,8 +15,8 @@ import math
 import time
 from astropy import units as u
 
-def SCAOSim(wavelength,nPix,nScreen,SDIslandEffect,SDSegmentJitter,rmsWindshake
-            ,mag,pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen'):
+def SCAOSim(wavelength,nPix,nScreen,SDIslandEffect,SDSegmentJitter,SD_WS
+            ,mag,coro,pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen'):
     '''
     Parameters
     ----------
@@ -49,17 +49,22 @@ def SCAOSim(wavelength,nPix,nScreen,SDIslandEffect,SDSegmentJitter,rmsWindshake
     image=np.zeros((nPix,nPix))
     np.random.seed(0)
     amp= np.random.normal(0, SDIslandEffect, 6) #um
-    print(amp)
-    '''
-    y_predicted = [0,0,0,0,0,0]
-    MSE = mean_squared_error(amp, y_predicted)
-    RMSE = math.sqrt(MSE)
-    print("Root Mean Square Error:\n")
-    '''
-    print("SD:\n")
+    #print(amp)
+   
+    #print("SD:\n")
     SD= statistics.stdev(amp)
     print(SD)
     name= Mod_segment(amp,1)
+    hdu_tt= fits.open('Time_hist_TT_wind10ms_TelZ45M2_290sec_500Hz.fits')
+    Data_tt = (hdu_tt [0] .data)*1e-09
+    tip=(Data_tt[0]).astype(float)
+    tilt=(Data_tt[1]).astype(float)
+    SD_tip= statistics.stdev(tip)
+    SD_tilt=statistics.stdev(tilt)
+    Data_tip=tip*SD_WS/SD_tip
+    Data_tilt=tilt*SD_WS/SD_tilt
+    SD_tt_norm= statistics.stdev(Data_tip)
+    SD_tt_norm= statistics.stdev(Data_tilt)
     
     for i in np.arange(1,nScreen):
         print('\r{:04}'.format(i),end = '')
@@ -83,19 +88,25 @@ def SCAOSim(wavelength,nPix,nScreen,SDIslandEffect,SDSegmentJitter,rmsWindshake
         osys = po.OpticalSystem(npix = 400,oversample = 4)
         osys.add_pupil(atmScreen)
       
-        if rmsWindshake!=0:
+        if SD_WS!=0:
             wfe = po.ZernikeWFE(radius=19*u.m,
-                                coefficients=[0, np.random.random()*rmsWindshake, np.random.random()*rmsWindshake, 0e-6, 0, 0e-6, 0e-6],
+                                coefficients=[0, Data_tip[i+100], Data_tilt[i+100], 0e-6, 0, 0e-6, 0e-6],
                                 aperture_stop=False)
             osys.add_pupil(wfe)
-        
+        if coro!=0:
+            osys.add_image()
+            osys.add_image(po.BandLimitedCoron(kind='cicular',  sigma=5.0))
         osys.add_pupil(piston_segm)
+       
         amp= np.random.normal(0, SDSegmentJitter, 6) #um
         name2= Mod_segment(amp,2)
         piston_vibra=po.FITSOpticalElement(transmission='Tel-Pupil.fits', opd='C:/Users/esoria.DOMAINT/Desktop/ANDES/vibra/'+name2.format(i)
                                           ,opdunits='nm',planetype=po.poppy_core.PlaneType.pupil)
         osys.add_pupil(piston_vibra)
-        osys.add_detector(pixelscale=0.005, fov_arcsec=0.5)
+        if nPix==400:
+            osys.add_detector(pixelscale=0.005, fov_arcsec=0.5)
+        if nPix==800:
+            osys.add_detector(pixelscale=0.005, fov_arcsec=1)
         # psf = osys.calc_psf(1.6e-6, display_intermediates=True)#for debugging
         psf = osys.calc_psf(wavelength)
         image += psf[0].data
@@ -108,7 +119,7 @@ def SCAOSim(wavelength,nPix,nScreen,SDIslandEffect,SDSegmentJitter,rmsWindshake
     psf[0].header['MAGN'] = (mag ,'magnitud reference star')
     psf[0].header['SD_SP'] = (round(SD,3) ,'SD static piston (um)')
     psf[0].header['SD_DP'] = (SDSegmentJitter ,'SD dynamic piston (um)')
-    psf[0].header['TT'] = (rmsWindshake ,'TT error (m)')
+    psf[0].header['TT'] = (SD_tt_norm ,'SD TT(nm)')
     filename1 = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     if mag==0 :
         name=filename1+'I={}-{:.0f}nm-DL.fits'.format(mag,wavelength*10**9)

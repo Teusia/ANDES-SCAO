@@ -9,10 +9,12 @@ import numpy as np
 import poppy as po
 import datetime
 from pupil_ANDES import *
+from astropy.io import fits
 
 def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshake
-            ,atmWorseningFactor,seed,pupilMap,pupilFileName='Tel-Pupil.fits', atmFilePrefix='screen'
-            ,outputFileSufix='I=8'):
+            ,atmWorseningFactor,seed,pupilMap,pupilFileName='Tel-Pupil.fits', 
+            atmFilePrefix='screen',outputFileSufix='I=8',esoData=False,path2esoData=None,
+            esoPsfTipTilt=None):
     '''
     Parameters
     ----------
@@ -50,51 +52,108 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
     image=np.zeros((nPix,nPix))
     rng = np.random.default_rng(seed)
     amp= rng.normal(0, rmsIslandEffect, 6) #mm
+    if rmsIslandEffect>0:
+        amp *= rmsIslandEffect/np.std(amp)
+        amp -= np.mean(amp)
     staticPist = Mod_segment(pupilMap,amp)
+    print('standard deviation: {}'.format(np.std(staticPist[pupilMap>0])))
     
-    for i in np.arange(1,nScreen):
+    # plt.figure()
+    # plt.title('static pist')
+    # plt.imshow(staticPist)
+    # plt.colorbar()
+    # plt.axis('off')
+    
+    if esoData:
+        if esoPsfTipTilt != None:
+            ttData = fits.open(path2esoData+esoPsfTipTilt)
+            rng = np.random.default_rng(seed)
+            start=rng.integers(0,ttData[0].data.shape[1]-nScreen-1)
+            
+            ttSequence = ttData[0].data[:,start:start+nScreen]
+            for tt in range(2):
+                ttSequence[tt] *= rmsWindshake/np.std(ttSequence[tt])
+                ttSequence[tt] -= np.mean(ttSequence[tt])
+            ttData.close()
+    
+    for i in np.arange(0,nScreen):
         print('\r{:04}'.format(i),end = '')
        
+        
         atmScreen = po.FITSOpticalElement( transmission=pupilFileName
                                        ,opd=atmFilePrefix+'{:.0f}.fits'
-                                       .format(i),opdunits='meters'
+                                       .format(i+300),opdunits='meters'
                                       ,planetype=po.poppy_core.PlaneType.pupil)
         
         # tmp = atmScreen.opd.copy()
         
+        #scale the atmosphere if a different 
         atmScreen.opd*=atmWorseningFactor
+        # plt.figure()
+        # plt.title('residue')
+        # plt.imshow(atmScreen.opd)
+        # plt.colorbar()
+        # plt.axis('off')
+        
+        #create the dynamic piston
         jit = rng.normal(0,rmsSegmentJitter,6)
+        if rmsSegmentJitter>0:
+            jit *= rmsIslandEffect/np.std(jit)
+            jit -= np.mean(jit)
         jitterPist = Mod_segment(pupilMap, jit)
         
+        # plt.figure()
+        # plt.title('dynamicPost')
+        # plt.imshow(jitterPist)
+        # plt.colorbar()
+        # plt.axis('off')
+        
+        #add the contribution of the static and dynamic piston
         atmScreen.opd+=staticPist+jitterPist
-        # piston_segm=po.FITSOpticalElement(transmission=pupilFileName, 
-        #                                   opd='Segm_pupil.fits'
-        #                                   ,opdunits='nm',
-        #                                   planetype=po.poppy_core.PlaneType.pupil)
         
-        osys = po.OpticalSystem(npix = 400,oversample = 4)
+        #setup the windshake
+        if esoData and esoPsfTipTilt!=None:
+            tip = ttSequence[0,i]
+            tilt = ttSequence[1,i]
+        else:
+            rWS = rng.normal(0,rmsWindshake)
+            dirWS = rng.uniform(-np.pi,np.pi)
+            
+            tip = rWS*np.cos(dirWS)
+            tilt = rWS*np.sin(dirWS)
+        
+        wfe = po.ZernikeWFE(radius=39/2,
+                            coefficients=[0,tip,tilt ],
+                            aperture_stop=True)
+        
+        #set up the optica system for calculation
+        osys = po.OpticalSystem(oversample = 4)
         osys.add_pupil(atmScreen)
-       
-       
-       # wfe = po.ZernikeWFE(radius=15*u.m,
-                        #    coefficients=[np.random.random()*1e-7, np.random.random()*1e-7, 1e-7, 0e-6, 0, 0e-6, 0e-6],
-                          #  aperture_stop=True)
-      
-        #osys.add_pupil(wfe)
+        osys.add_pupil(wfe)
+        osys.add_detector(pixelscale=0.005, fov_arcsec=2.0)
         
-        osys.add_detector(pixelscale=0.005, fov_arcsec=0.5)
-        # psf = osys.calc_psf(1.6e-6, display_intermediates=True)#for debugging
+        #calculation
+        # psf = osys.calc_psf(wavelength, display_intermediates=True)#for debugging
         psf = osys.calc_psf(wavelength)
+        
+        # plt.figure()
+        # plt.imshow(np.log(psf[0].data),cmap = 'gist_heat')
+        # plt.axis('off')
         image += psf[0].data
     
     print('\nfinished')
-
+    
+    # plt.figure()
+    # plt.imshow(np.log(image),cmap = 'gist_heat')
+    # plt.axis('off')
 
     psf[0].data = image.copy()
     psf[0].header['ATMFACTO'] = (atmWorseningFactor ,'factor applied to the atmospheric screen')
+    psf[0].header['ATMSERIE'] = atmFilePrefix
     psf[0].header['RNGSEED'] = seed
     psf[0].header['RMSSTAT'] = rmsIslandEffect
-    psf[0].header['RMSJIT'] = rmsSegmentJitter
+    psf[0].header['RMSSEGJI'] = rmsSegmentJitter
+    psf[0].header['RMSWS'] = rmsWindshake
     psf[0].header['MAGNITUD'] = outputFileSufix
     filename1 = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")+'_'+outputFileSufix+'_{:.0f}nm.fits'.format(wavelength*10**9)
     psf.writeto(filename1)
@@ -107,8 +166,15 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
 if __name__ == '__main__':
     ppMap = buildPupil()
     
-    outFile = SCAOSim(1600*10**-9, 400, 2000, 500*10**-9, 50*10**-9, 0, 1.0
-                      , 12345, ppMap)
+    # outFile = SCAOSim(1000*10**-9, 1600, 1000, 00*10**-9, 00*10**-9, 100*10**-9, 0.0
+    #                   , 12345, ppMap,atmFilePrefix = 'screen_I=8/screenI=8'
+    #                   ,outputFileSufix='test')
+    
+    outFile = SCAOSim(1000*10**-9, 1600, 1000, 00*10**-9, 00*10**-9, 100*10**-9, 0.0
+                      , 12345, ppMap,atmFilePrefix = 'screen_I=8/screenI=8'
+                      ,outputFileSufix='test',esoData=True,
+                      path2esoData='C:/Users/anne.cheffot/simulations/python/ANDES-SCAO/',
+                      esoPsfTipTilt='Time_hist_TT_wind10ms_TelZ45M2_290sec_500Hz.fits')
 
 
 

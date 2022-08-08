@@ -32,7 +32,7 @@ def computeRadialProfile(image, centerInPxY, centerInPxX):
     nPxInRadialBin= radialDistanceChanges[1:] - \
         radialDistanceChanges[:-1]
     imageRadialCumSum= np.cumsum(imageValuesSortedByRadialDistance,
-                                 dtype=np.float64)
+                                  dtype=np.float64)
     imageSumInBinZero= imageRadialCumSum[radialDistanceChanges[0]]
     imageSumInRadialBin= \
         imageRadialCumSum[radialDistanceChanges[1:]] - \
@@ -106,8 +106,11 @@ def binnedContrast(psfData,binSize,pix2arcsec):
     binEdges = np.arange(binSize/2,fov/2,binSize)
     
     #calculate the reference
+    x = np.linspace(-fov/2,fov/2,psfData.shape[0])
+    X,Y = np.meshgrid(x,x)
+    R = np.sqrt(X**2+Y**2)
     mask = R<=binSize/2
-    ref = np.sum(test*mask)
+    ref = np.sum(psfData*mask)
     
     #initialise variables to fill
     mmin = np.zeros(nbBin)
@@ -115,6 +118,7 @@ def binnedContrast(psfData,binSize,pix2arcsec):
     maverage = np.zeros(nbBin)
     mstd = np.zeros(nbBin)
     mmin[0] = mmax[0] = maverage[0] = ref
+    # cummask = np.zeros(mask.shape)
     
     for rd in range(1,nbBin):#for each bin
         alpha = np.arctan(1/(2*rd))#find the displacement
@@ -128,22 +132,35 @@ def binnedContrast(psfData,binSize,pix2arcsec):
             mask=tmpR<=binSize/2
             
             #accumulate the pixels sum
-            curring.append(np.sum(test*mask))
+            curring.append(np.sum(psfData*mask))
+            
+            # plt.figure(0)
+            # plt.clf()
+            # plt.imshow(np.log10(psfData)+mask,extent = [-fov/2,fov/2,-fov/2,fov/2])
+            # plt.pause(0.1)
+            
+            # plt.figure(1)
+            # plt.clf()
+            # cummask+=mask
+            # plt.imshow(cummask)
+            # plt.pause(0.1)
+            
         # plt.figure(10+rd)
         # plt.clf()
-        # plt.imshow(np.log(test),cmap = 'hot',extent = [-200*pix2arcsec,200*pix2arcsec
-        #                                        ,-200*pix2arcsec,200*pix2arcsec])
+        # plt.imshow(np.log(psfData),cmap = 'hot',extent = [-fov/2,fov/2
+        #                                         ,-fov/2,fov/2])
         # plt.scatter(rd*binSize*np.cos(alpha*np.arange(nbPos))
         #             ,rd*binSize*np.sin(alpha*np.arange(nbPos)),
         #             c=np.log(curring),cmap='hot')
-        # plt.title('radial distance {:.0f} mas'.format(radDist*rd))
+        # plt.title('radial distance {:.0f} mas'.format(binSize*rd*10**3))
 
-        # plt.figure(10+rd)
+        # plt.figure(100+rd)
         # plt.clf()
         # plt.hist(curring/ref)
-        # plt.title('radial distance {:.0f} mas'.format(radDist*rd))
+        # plt.title('radial distance {:.0f} mas'.format(binSize*rd*10**3))
         # plt.xlabel('contrast values')
         # plt.ylabel('number of samples')
+        
         mmin[rd] = np.min(curring)
         mmax[rd] = np.max(curring)
         maverage[rd] = np.mean(curring)
@@ -211,123 +228,124 @@ def plotBinnedContrast(binDat,wavelength,starType,saveFig = False,
     
 
 #%%
-path2fits = '20220530-162324/'
-listFits = os.listdir(path2fits)
-listFits = [a for a in listFits if '.fits' in a]
-
-baseline = {1000:[[[25,85],[35,95]],[[10**-2,1.6*10**-3],[10**-2,1.6*10**-3]]],
-            1600:[[[25,85],[35,95]],[[10**-2,1.0*10**-3],[10**-2,1.0*10**-3]]],
+if __name__ == '__main__':
+    path2fits = '20220530-162324/'
+    listFits = os.listdir(path2fits)
+    listFits = [a for a in listFits if '.fits' in a]
+    
+    baseline = {1000:[[[25,85],[35,95]],[[10**-2,1.6*10**-3],[10**-2,1.6*10**-3]]],
+                1600:[[[25,85],[35,95]],[[10**-2,1.0*10**-3],[10**-2,1.0*10**-3]]],
+                2200:[[[25,85],[35,95]],[[10**-6,1.0*10**-6],[10**-6,1.0*10**-6]]]}
+    goal = {1000: [[[25,85],[35,95]],[[10**-3,2.0*10**-4],[10**-3,2.0*10**-4]]],
+            1600: [[[25,85],[35,95]],[[10**-3,1.0*10**-4],[10**-3,1.0*10**-4]]],
             2200:[[[25,85],[35,95]],[[10**-6,1.0*10**-6],[10**-6,1.0*10**-6]]]}
-goal = {1000: [[[25,85],[35,95]],[[10**-3,2.0*10**-4],[10**-3,2.0*10**-4]]],
-        1600: [[[25,85],[35,95]],[[10**-3,1.0*10**-4],[10**-3,1.0*10**-4]]],
-        2200:[[[25,85],[35,95]],[[10**-6,1.0*10**-6],[10**-6,1.0*10**-6]]]}
-ylimplot = [9*10**-6,1.5]
-
-
-
-plt.close('all')
-
-radialStop = 0.25 #arcsec
-binSize = 0.010#arcsec
-
-magnitude = ['diffraction limit',8,15,14]
-listCases = []
-
-for lf in listFits:
-
-    with fits.open(path2fits+lf) as hdul1:
-        # hdul1.info()
-        test = hdul1[0].data
-        wl = int(hdul1[0].header['WAVELEN']*10**9)
-        mag = hdul1[0].header['MAGNITUD']
-        listCases.append([wl,mag])
-        pix2arcsec = hdul1[0].header['PIXELSCL']
-        hdul1.close()
-    
-    #normalise the image
-    test *= 1/np.max(test)
-
-    imgSize = test.shape[0]
-
-    nbBin = np.floor(radialStop/binSize).astype(int)
-    # binEdges = np.arange(binSize/2,radialStop,binSize)
-    
-    x = np.arange(-imgSize/2,imgSize/2)+0.5
-    
-    x*=pix2arcsec
-    X,Y = np.meshgrid(x,x)
-    R = np.sqrt(X**2+Y**2)
-    
-    binData = binnedContrast(test, binSize,pix2arcsec)
-    plotBinnedContrast(binData,wl,mag,figName = lf)
-    
-    #adjust the psf center
-    # centering = adjustCenter(test)
-    centering = cog(test,0.05*np.max(test))
-    
-    #Calculate the psf profiles
-    profile,radDist = computeRadialProfile(test, *centering)
-    #Normalise the psf profile 
-    nProfile = profile/np.max(profile)
-    
-    plt.figure(wl)
-    mas = radDist*pix2arcsec*10**3
-    plt.semilogy(mas,nProfile,label = mag)
+    ylimplot = [9*10**-6,1.5]
     
     
     
-#plots prettyfication
-#psf profile
-wluni = np.unique([a[0] for a in listCases])
-
-for i in wluni:
-    plt.figure(i)
-    plt.plot(baseline[i][0],baseline[i][1],'r',linewidth = 3)
-    plt.plot(goal[i][0],goal[i][1],'m',linewidth = 3)
-    plt.grid()
-    # custom_lines = [Line2D([0],[0],color='C0'),
-    #                 Line2D([0],[0],color='C1'),
-    #                 Line2D([0],[0],color = 'r'),
-    #                 Line2D([0],[0],color = 'm')
-    #                 ]
-    plt.ylim(ylimplot)
-    plt.legend(
-        # custom_lines,['diffraction limit','I=8'
-        #                        ,'Baseline','goal'
-        #                      ],
-            handletextpad=0.2,
-                   labelspacing = 0.2)
+    plt.close('all')
     
-    plt.xlim([0,100])
-    plt.grid()
-    plt.xlabel('distance from PSF center [mas]')
-    plt.ylabel('relative intensity')
+    radialStop = 0.25 #arcsec
+    binSize = 0.010#arcsec
     
-    plt.grid()
-    plt.title('wavelength {:.0f} nm'.format(i))
-    plt.tight_layout()
-
-#binned psf profiles details of everything
-# for lf in range(len(listFits)):
+    magnitude = ['diffraction limit',8,15,14]
+    listCases = []
     
-#     plt.figure(listFits[lf])
-#     plt.plot(baseline[listCases[lf][0]][0],baseline[listCases[lf][0]][1],'r',linewidth = 3)
-#     plt.plot(goal[listCases[lf][0]][0],goal[listCases[lf][0]][1],'m',linewidth = 3)
-#     plt.xlabel('distance from PSF center [mas]')
-#     plt.ylabel('relative flux')
+    for lf in listFits:
     
-#     plt.title('wl = {:.0f} nm, {}'.format(listCases[lf][0],listCases[lf][1]))
-#     custom_lines = [Line2D([0],[0],color='C0'),
-#                     Line2D([0],[0],color='C1'),
-#                     Line2D([0],[0],color='C2'),
-#                     ]
-#     plt.legend(custom_lines,['min','max','average+std',
-#                              ],
-#                handletextpad=0.2,
-#                labelspacing = 0.2)
-#     plt.ylim(ylimplot)
-#     plt.grid()
-    # plt.tight_layout()
-
-# plt.semilogy([90,90], [5*10**-5,1],'k--')
-# plt.semilogy([30,30], [5*10**-5,1],'k--')
+        with fits.open(path2fits+lf) as hdul1:
+            # hdul1.info()
+            test = hdul1[0].data
+            wl = int(hdul1[0].header['WAVELEN']*10**9)
+            mag = hdul1[0].header['MAGNITUD']
+            listCases.append([wl,mag])
+            pix2arcsec = hdul1[0].header['PIXELSCL']
+            hdul1.close()
+        
+        #normalise the image
+        test *= 1/np.max(test)
+    
+        imgSize = test.shape[0]
+    
+        nbBin = np.floor(radialStop/binSize).astype(int)
+        # binEdges = np.arange(binSize/2,radialStop,binSize)
+        
+        x = np.arange(-imgSize/2,imgSize/2)+0.5
+        
+        x*=pix2arcsec
+        X,Y = np.meshgrid(x,x)
+        R = np.sqrt(X**2+Y**2)
+        
+        binData = binnedContrast(test, binSize,pix2arcsec)
+        plotBinnedContrast(binData,wl,mag,figName = lf)
+        
+        #adjust the psf center
+        # centering = adjustCenter(test)
+        centering = cog(test,0.05*np.max(test))
+        
+        #Calculate the psf profiles
+        profile,radDist = computeRadialProfile(test, *centering)
+        #Normalise the psf profile 
+        nProfile = profile/np.max(profile)
+        
+        plt.figure(wl)
+        mas = radDist*pix2arcsec*10**3
+        plt.semilogy(mas,nProfile,label = mag)
+        
+        
+        
+    #plots prettyfication
+    #psf profile
+    wluni = np.unique([a[0] for a in listCases])
+    
+    for i in wluni:
+        plt.figure(i)
+        plt.plot(baseline[i][0],baseline[i][1],'r',linewidth = 3)
+        plt.plot(goal[i][0],goal[i][1],'m',linewidth = 3)
+        plt.grid()
+        # custom_lines = [Line2D([0],[0],color='C0'),
+        #                 Line2D([0],[0],color='C1'),
+        #                 Line2D([0],[0],color = 'r'),
+        #                 Line2D([0],[0],color = 'm')
+        #                 ]
+        plt.ylim(ylimplot)
+        plt.legend(
+            # custom_lines,['diffraction limit','I=8'
+            #                        ,'Baseline','goal'
+            #                      ],
+                handletextpad=0.2,
+                       labelspacing = 0.2)
+        
+        plt.xlim([0,100])
+        plt.grid()
+        plt.xlabel('distance from PSF center [mas]')
+        plt.ylabel('relative intensity')
+        
+        plt.grid()
+        plt.title('wavelength {:.0f} nm'.format(i))
+        plt.tight_layout()
+    
+    #binned psf profiles details of everything
+    # for lf in range(len(listFits)):
+        
+    #     plt.figure(listFits[lf])
+    #     plt.plot(baseline[listCases[lf][0]][0],baseline[listCases[lf][0]][1],'r',linewidth = 3)
+    #     plt.plot(goal[listCases[lf][0]][0],goal[listCases[lf][0]][1],'m',linewidth = 3)
+    #     plt.xlabel('distance from PSF center [mas]')
+    #     plt.ylabel('relative flux')
+        
+    #     plt.title('wl = {:.0f} nm, {}'.format(listCases[lf][0],listCases[lf][1]))
+    #     custom_lines = [Line2D([0],[0],color='C0'),
+    #                     Line2D([0],[0],color='C1'),
+    #                     Line2D([0],[0],color='C2'),
+    #                     ]
+    #     plt.legend(custom_lines,['min','max','average+std',
+    #                              ],
+    #                handletextpad=0.2,
+    #                labelspacing = 0.2)
+    #     plt.ylim(ylimplot)
+    #     plt.grid()
+        # plt.tight_layout()
+    
+    # plt.semilogy([90,90], [5*10**-5,1],'k--')
+    # plt.semilogy([30,30], [5*10**-5,1],'k--')

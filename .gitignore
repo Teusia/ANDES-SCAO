@@ -157,3 +157,5 @@ cython_debug/
 *.fits
 *.png
 *.pro
+*.svg
+*.json

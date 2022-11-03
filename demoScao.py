@@ -56,7 +56,7 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
         amp *= rmsIslandEffect/np.std(amp)
         amp -= np.mean(amp)
     staticPist = Mod_segment(pupilMap,amp)
-    print('standard deviation: {}'.format(np.std(staticPist[pupilMap>0])))
+    # print('standard deviation: {}'.format(np.std(staticPist[pupilMap>0])))
     
     # plt.figure()
     # plt.title('static pist')
@@ -74,9 +74,14 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
             for tt in range(2):
                 ttSequence[tt] *= rmsWindshake/np.std(ttSequence[tt])
                 ttSequence[tt] -= np.mean(ttSequence[tt])
+            
             ttData.close()
+        if nScreen<2:
+            print('warning: not enough screens to rescale the tip tilt, omiting tiptilt')
+            ttSequence = np.array([[0],[0]])
     
-    for i in np.arange(0,nScreen):
+    # for i in np.arange(0,nScreen):
+    for i in range(nScreen):
         print('\r{:04}'.format(i),end = '')
        
         
@@ -89,6 +94,10 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
         
         #scale the atmosphere if a different 
         atmScreen.opd*=atmWorseningFactor
+        
+        #remove AO residual piston opd
+        for s in range(6):
+            atmScreen.opd[pupilMap==s+1]-=np.mean(atmScreen.opd[pupilMap==s+1])
         # plt.figure()
         # plt.title('residue')
         # plt.imshow(atmScreen.opd)
@@ -98,7 +107,7 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
         #create the dynamic piston
         jit = rng.normal(0,rmsSegmentJitter,6)
         if rmsSegmentJitter>0:
-            jit *= rmsIslandEffect/np.std(jit)
+            # jit *= rmsIslandEffect/np.std(jit)
             jit -= np.mean(jit)
         jitterPist = Mod_segment(pupilMap, jit)
         
@@ -130,7 +139,7 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
         osys = po.OpticalSystem(oversample = 4)
         osys.add_pupil(atmScreen)
         osys.add_pupil(wfe)
-        osys.add_detector(pixelscale=0.005, fov_arcsec=2.0)
+        osys.add_detector(pixelscale=0.00125, fov_arcsec=0.5)
         
         #calculation
         # psf = osys.calc_psf(wavelength, display_intermediates=True)#for debugging

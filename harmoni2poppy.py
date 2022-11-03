@@ -12,7 +12,8 @@ startScreen = 300
 
 # path2screens = 'resOPDVarFlux/I=7/'
 # filename = 'ResidualOPD_mag_7_iteration_'
-path2screens = 'SEEING/seeing8/'
+# path2screens = 'SEEING/seeing8/'
+path2screens = 'LATENCY/seeing8/'
 filename = 'ResidualOPD_seeing_8_iteration_'
 
 for i in range(2000):

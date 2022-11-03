@@ -7,6 +7,7 @@ Created on Fri Jan 28 11:45:35 2022
 """
 import numpy as np
 import poppy as po
+import os
 import datetime
 from pupil_ANDES import *
 from astropy.io import fits
@@ -14,7 +15,8 @@ from astropy.io import fits
 def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshake
             ,atmWorseningFactor,seed,pupilMap,pupilFileName='Tel-Pupil.fits', 
             atmFilePrefix='screen',outputFileSufix='I=8',esoData=False,path2esoData=None,
-            esoPsfTipTilt=None):
+            esoPsfTipTilt=None,complexOutWF = False,fieldOfView=0.5,pixelScale=0.00125,
+            saveIntermediateComplexWavefront=False, pathFileComplex=None):
     '''
     Parameters
     ----------
@@ -43,6 +45,21 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
     outputFileSufix : string, optional
         The output file should be date_time followed by a suffix.
         The default is 'I=8-2200nm.fits'.
+    esoData : boolean, optionnal
+        whether to use the tip tilt informations provided by ESO or not, default : False
+    path2esoData : string, optionnal
+        Path to where is the eso tiptilt data stored. default: None
+    fieldOfView: float,optionnal
+        field of view diameter of the image in arc seconds. default: 0.5
+        note: fieldOfView/pixelScale must be the number of pixels accross the pupil file(400)
+    pixelScale: float, optionnal
+        size of a pixel on sky. default: 0.00125
+        note: fieldOfView/pixelScale must be the number of pixels accross the pupil file(400)
+    saveIntermediateComplexWavefront: boulean. optionnal
+        Do you want to save each intermediate complex wavefront, default : False
+    pathFileComplex: string, optionnal
+        Where to save the complexe wavefront
+    
     Returns
     -------
     imageFileName : str
@@ -139,11 +156,32 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
         osys = po.OpticalSystem(oversample = 4)
         osys.add_pupil(atmScreen)
         osys.add_pupil(wfe)
-        osys.add_detector(pixelscale=0.00125, fov_arcsec=0.5)
+        osys.add_detector(pixelscale=pixelScale, fov_arcsec=fieldOfView)
         
         #calculation
         # psf = osys.calc_psf(wavelength, display_intermediates=True)#for debugging
-        psf = osys.calc_psf(wavelength)
+        if saveIntermediateComplexWavefront:
+            psf,compWf = osys.calc_psf(wavelength, return_intermediates = True)
+            
+            hdu =fits.PrimaryHDU(np.array([np.real(compWf[-1].wavefront)
+                                           ,np.imag(compWf[-1].wavefront)]))
+            
+            hdul = fits.HDUList(hdu)
+            hdul[0].header['ATMFACTO'] = (atmWorseningFactor ,'factor applied to the atmospheric screen')
+            hdul[0].header['ATMSERIE'] = atmFilePrefix
+            hdul[0].header['RNGSEED'] = seed
+            hdul[0].header['RMSSTAT'] = rmsIslandEffect
+            hdul[0].header['RMSSEGJI'] = rmsSegmentJitter
+            hdul[0].header['RMSWS'] = rmsWindshake
+            hdul[0].header['MAGNITUD'] = outputFileSufix
+            hdul[0].header['SCREENNB'] = i+300
+            if not(os.path.exists(pathFileComplex)):
+                os.mkdir(pathFileComplex)
+            hdul.writeto(pathFileComplex+outputFileSufix+'screenNb{}.fits'.format(i+300))
+            del hdul[0].data
+            
+        else:
+            psf = osys.calc_psf(wavelength)
         
         # plt.figure()
         # plt.imshow(np.log(psf[0].data),cmap = 'gist_heat')

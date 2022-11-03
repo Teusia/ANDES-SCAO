@@ -13,12 +13,14 @@ Outputs:
 	*COG coordinate y
 
 """
-def cog(input, threshold):
-    import numpy as np 
+import numpy as np 
+
+def cog(img, threshold):
+    
     #
     
-    height = np.size(input,0)
-    width = np.size(input,1)
+    height = np.size(img,0)
+    width = np.size(img,1)
     
     sum_numx=0
     sum_numy=0
@@ -26,7 +28,7 @@ def cog(input, threshold):
     pixel=np.zeros((height,width))
     for i in range(1,width+1):
         for j in range(1,height+1):
-            pixel=input[j-1,i-1]
+            pixel=img[j-1,i-1]
             if (pixel>threshold):
                 pixel=pixel-threshold
                 sum_numx=sum_numx+pixel*(i-1)
@@ -36,3 +38,17 @@ def cog(input, threshold):
     cx=sum_numx/sum_den
     cy=sum_numy/sum_den
     return cx,cy
+
+
+def wcog(img):
+    sizeImg = img.shape[0]
+    x = np.arange(sizeImg)
+    X,Y = np.meshgrid(x,x)
+    
+    avrx = np.average(X,weights=img)
+    avry = np.average(Y,weights=img)
+    
+    return avrx,avry
+    
+    
+

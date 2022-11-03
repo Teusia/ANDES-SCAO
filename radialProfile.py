@@ -111,6 +111,7 @@ def binnedContrast(psfData,binSize,pix2arcsec):
     R = np.sqrt(X**2+Y**2)
     mask = R<=binSize/2
     ref = np.sum(psfData*mask)
+    # ref = np.max(psfData)
     
     #initialise variables to fill
     mmin = np.zeros(nbBin)
@@ -170,6 +171,10 @@ def binnedContrast(psfData,binSize,pix2arcsec):
     mmax *=1/ref
     maverage *=1/ref
     mstd *= 1/ref
+    # mmin *=1/np.max(psfData)
+    # mmax *=1/np.max(psfData)
+    # maverage *=1/np.max(psfData)
+    # mstd *= 1/np.max(psfData)
     xvar = np.arange(0,binEdges[-1],binSize)
     
     return xvar,mmin,mmax,maverage,mstd
@@ -220,7 +225,7 @@ def plotBinnedContrast(binDat,wavelength,starType,saveFig = False,
         plt.ylim(ylimp)
     if xlimp:
         plt.xlabel(xlimp)
-    plt.grid()
+    plt.grid(which = 'both')
     plt.tight_layout()
     
     if saveFig:

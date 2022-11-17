@@ -11,12 +11,14 @@ import os
 import datetime
 from pupil_ANDES import *
 from astropy.io import fits
+from primarySegmentation import ELTprimary
 
 def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshake
             ,atmWorseningFactor,seed,pupilMap,pupilFileName='Tel-Pupil.fits', 
             atmFilePrefix='screen',outputFileSufix='I=8',esoData=False,path2esoData=None,
             esoPsfTipTilt=None,complexOutWF = False,fieldOfView=0.5,pixelScale=0.00125,
-            saveIntermediateComplexWavefront=False, pathFileComplex=None):
+            saveIntermediateComplexWavefront=False, pathFileComplex=None,
+            primaryFits = None,primaryPistRms = 0):
     '''
     Parameters
     ----------
@@ -59,6 +61,11 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
         Do you want to save each intermediate complex wavefront, default : False
     pathFileComplex: string, optionnal
         Where to save the complexe wavefront
+    primaryFits: string, optionnal
+        path to the primary segment map
+    primaryPistRms: float, optionnal
+        rms piston error on the primary mirror in meters. 
+    
     
     Returns
     -------
@@ -80,6 +87,9 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
     # plt.imshow(staticPist)
     # plt.colorbar()
     # plt.axis('off')
+    
+    if primaryFits is not None:
+        prim = ELTprimary(primaryFits)
     
     if esoData:
         if esoPsfTipTilt != None:
@@ -134,8 +144,25 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
         # plt.colorbar()
         # plt.axis('off')
         
+        if primaryFits is not None:
+            pist = rng.normal(0,1,len(prim.segmentlist))*primaryPistRms
+            for s in range(len(prim.segmentlist)):
+                prim.set_segment(prim.segmentlist[s],pist[s])
+            wave = po.Wavefront(npix = 400)
+            primopd = prim.get_opd(wave)
+        else:
+            primopd = np.zeros((atmScreen.opd.shape))
+        
+        # plt.figure(1)
+        # plt.clf()
+        # plt.imshow(primopd)
+        
         #add the contribution of the static and dynamic piston
-        atmScreen.opd+=staticPist+jitterPist
+        atmScreen.opd+=staticPist+jitterPist+primopd
+        
+        # plt.figure(2)
+        # plt.clf()
+        # plt.imshow(atmScreen.opd)
         
         #setup the windshake
         if esoData and esoPsfTipTilt!=None:
@@ -217,11 +244,12 @@ if __name__ == '__main__':
     #                   , 12345, ppMap,atmFilePrefix = 'screen_I=8/screenI=8'
     #                   ,outputFileSufix='test')
     
-    outFile = SCAOSim(1000*10**-9, 1600, 1000, 00*10**-9, 00*10**-9, 100*10**-9, 0.0
-                      , 12345, ppMap,atmFilePrefix = 'screen_I=8/screenI=8'
+    outFile = SCAOSim(1000*10**-9, 1600, 1000, 00*10**-9, 00*10**-9, 000*10**-9, 0.0
+                      , 12345, ppMap,atmFilePrefix = 'SEEING/seeing1/ResidualOPD_seeing_1_iteration_'
                       ,outputFileSufix='test',esoData=True,
                       path2esoData='C:/Users/anne.cheffot/simulations/python/ANDES-SCAO/',
-                      esoPsfTipTilt='Time_hist_TT_wind10ms_TelZ45M2_290sec_500Hz.fits')
+                      esoPsfTipTilt='Time_hist_TT_wind10ms_TelZ45M2_290sec_500Hz.fits',
+                      primaryFits='primaryMap.fits',primaryPistRms=100*10**-9)
 
 
 

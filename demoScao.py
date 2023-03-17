@@ -189,9 +189,8 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
         # psf = osys.calc_psf(wavelength, display_intermediates=True)#for debugging
         if saveIntermediateComplexWavefront:
             psf,compWf = osys.calc_psf(wavelength, return_intermediates = True)
-            
-            hdu =fits.PrimaryHDU(np.array([np.real(compWf[-1].wavefront)
-                                           ,np.imag(compWf[-1].wavefront)]))
+            hdu =fits.PrimaryHDU(np.array([np.real(compWf[-2].wavefront)
+                                           ,np.imag(compWf[-2].wavefront)]))
             
             hdul = fits.HDUList(hdu)
             hdul[0].header['ATMFACTO'] = (atmWorseningFactor ,'factor applied to the atmospheric screen')
@@ -202,9 +201,11 @@ def SCAOSim(wavelength,nPix,nScreen,rmsIslandEffect,rmsSegmentJitter,rmsWindshak
             hdul[0].header['RMSWS'] = rmsWindshake
             hdul[0].header['MAGNITUD'] = outputFileSufix
             hdul[0].header['SCREENNB'] = i+300
+            hdul[0].header['PIXELSCL'] = compWf[-1].pixelscale.value
+            hdul[0].header['FOVARCSE'] = compWf[-1].fov.value
             if not(os.path.exists(pathFileComplex)):
                 os.mkdir(pathFileComplex)
-            hdul.writeto(pathFileComplex+outputFileSufix+'screenNb{}.fits'.format(i+300))
+            hdul.writeto(pathFileComplex+outputFileSufix+'screenNb{}.fits'.format(i+300),overwrite = True)
             del hdul[0].data
             
         else:
@@ -244,12 +245,15 @@ if __name__ == '__main__':
     #                   , 12345, ppMap,atmFilePrefix = 'screen_I=8/screenI=8'
     #                   ,outputFileSufix='test')
     
-    outFile = SCAOSim(1000*10**-9, 1600, 1000, 00*10**-9, 00*10**-9, 000*10**-9, 0.0
+    outFile = SCAOSim(2200*10**-9, 400, 1, 00*10**-9, 00*10**-9, 000*10**-9, 0.0
                       , 12345, ppMap,atmFilePrefix = 'SEEING/seeing1/ResidualOPD_seeing_1_iteration_'
                       ,outputFileSufix='test',esoData=True,
+                      fieldOfView=0.4,
+                      pixelScale = 0.004,
                       path2esoData='C:/Users/anne.cheffot/simulations/python/ANDES-SCAO/',
                       esoPsfTipTilt='Time_hist_TT_wind10ms_TelZ45M2_290sec_500Hz.fits',
-                      primaryFits='primaryMap.fits',primaryPistRms=100*10**-9)
+                      primaryFits='primaryMap.fits',primaryPistRms=100*10**-9,
+                      saveIntermediateComplexWavefront=True,pathFileComplex='complexTest/')
 
 
 
